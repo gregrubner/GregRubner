@@ -17,6 +17,31 @@
     background: #000;
   }
 
+  /* iOS paints a translucent black rectangle over whatever was just
+     tapped -- the black bar that flashes over a button. It's WebKit's,
+     so iOS Chrome does it too (every iOS browser is WebKit underneath);
+     no other engine implements the property at all, so desktop is
+     unaffected either way. The property inherits, so setting it once
+     here covers every tappable thing on the page -- the nav buttons,
+     the thumbs, "Greg Rubner", the mailto link -- instead of having to
+     find them all. Set on html rather than a button selector because
+     the highlight applies to anything the engine deems tappable,
+     including the plain <div> thumbs that only have click handlers. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* a tap also *focuses* what it hit, so the ring can stay painted
+     after the finger lifts -- the same "visual change" by another
+     route. :not(:focus-visible) removes it only for pointer/touch
+     focus, leaving keyboard focus rings intact for anyone tabbing
+     through, which is the one case they're actually needed. */
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible),
+  .line-name:focus:not(:focus-visible) {
+    outline: none;
+  }
+
   /* ---------- melter background canvas ---------- */
   canvas#glcanvas {
     position: fixed;
@@ -1296,12 +1321,26 @@
 
   .about-paragraph a {
     color: inherit;
+    cursor: pointer;
   }
 
+  /* pointer-events:auto lives here rather than on the base
+     .about-paragraph because .stage is pointer-events:none (see its
+     rule) and every interactive piece opts back in individually --
+     without it the bio is inert: the email address can't be selected
+     with the mouse and its mailto: link never receives the click.
+     Scoping it to .showing-about matters on desktop, where .about-view
+     stays in the layout at opacity 0 on the other views (only the
+     mobile block display:nones it), so an always-on rule would have the
+     invisible bio column swallowing drags meant for the canvas behind
+     it on the home page. */
   .stage.showing-about .about-paragraph {
     opacity: 1;
     transform: translateY(0);
     transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: auto;
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   .stage.showing-about .about-paragraph:nth-child(1) { transition-delay: 0.93s; }
@@ -2286,6 +2325,16 @@
       font-size: clamp(19px, 5.6vw, 27px);
       line-height: 1.35;
     }
+    /* the whole tagline is italic here, "is a" included -- on mobile it
+       is one flowing sentence rather than desktop's separately-placed
+       words, so the upright "is a" read as a different typeface sitting
+       in the middle of it. Family, weight and size already matched (all
+       of .intro p is Sorts Mill Goudy 400, and the five words share the
+       clamp above); the slant was the only thing out. Mobile-only: on
+       desktop "is a" sits apart from the roles, where upright is the
+       contrast the composition is built on. */
+    .intro .line-is,
+    .intro .line-a,
     .intro .line-role1,
     .intro .line-amp,
     .intro .line-role2 { font-style: italic; }
@@ -2296,7 +2345,7 @@
     .intro .line-amp::before,
     .intro .line-role2::before { content: " "; }
 
-    /* per-view lead-ins sit on the name's own line, as on desktop */
+    /* per-view lead-ins take the line under the name */
     .intro .line-about-lead,
     .intro .line-direction-lead,
     .intro .line-design-lead {
@@ -2355,12 +2404,20 @@
     .stage.showing-direction .thumb-pink,
     .stage.showing-direction .thumb-pamlove { display: none; }
 
-    /* ---------- thumbnails ---------- */
+    /* ---------- thumbnails ----------
+       gap is half a thumbnail's height, derived rather than eyeballed so
+       it holds at every screen width: the thumbs are one full-width
+       column inside .stage's 20px side padding, so each is
+       (100vw - 40px) wide and, at the 16/9 below, (100vw - 40px) * 9/16
+       tall -- half of that is the * 9/32 here. Tied to that padding by
+       hand (a container query can't help: an element can't query the
+       container it establishes itself), so if the 20px above ever moves,
+       the 40px here has to move with it. */
     .portfolio-view,
     .stage.showing-design .design-view {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 16px;
+      gap: calc((100vw - 40px) * 9 / 32);
     }
     .thumb, .design-thumb {
       position: relative !important;
@@ -2426,16 +2483,20 @@
     }
 
     /* ---------- portfolio order + stagger ----------
-       Pamela Love is moved ahead of Pink $ock Live here only; the DOM
-       order (which the desktop canvas positions against) is untouched.
-       Because the column no longer matches DOM order, the stagger is
-       keyed to each thumb by name rather than :nth-child, so the
-       cascade still runs strictly top-to-bottom down the screen. */
-    .thumb-hero    { order: 1; animation-delay: 0.24s; }
-    .thumb-pamlove { order: 2; animation-delay: 0.31s; }
-    .thumb-pink    { order: 3; animation-delay: 0.38s; }
-    .thumb-dating  { order: 4; animation-delay: 0.45s; }
-    .thumb-circular{ order: 5; animation-delay: 0.52s; }
+       The running order of the column, set here only: the DOM order is
+       left alone because the desktop canvas positions against it, and
+       desktop is a scattered composition of differently-sized thumbs
+       rather than a sequence, so it has no running order to match.
+       Because the column no longer follows DOM order, the stagger is
+       keyed to each thumb by name rather than :nth-child -- the delays
+       below ascend with `order`, not with the markup, so the cascade
+       still runs strictly top-to-bottom down the screen. Renumbering
+       these means moving each delay to sit with its new position. */
+    .thumb-hero    { order: 1; animation-delay: 0.24s; }  /* WTHIGO */
+    .thumb-pamlove { order: 2; animation-delay: 0.31s; }  /* Pamela Love */
+    .thumb-circular{ order: 3; animation-delay: 0.38s; }  /* Circular Motion */
+    .thumb-dating  { order: 4; animation-delay: 0.45s; }  /* Dating To Great Success */
+    .thumb-pink    { order: 5; animation-delay: 0.52s; }  /* Pink $ock Live */
 
     /* design grid keeps DOM order, so :nth-child is the reading order */
     .design-thumb:nth-child(1)  { animation-delay: 0.24s; }
@@ -2626,24 +2687,6 @@
     .project-content { padding: 64px 0 0; max-width: none; }
     .project-content--editorial { padding: 0; }
 
-    .project-close-mobile {
-      display: block;
-      position: fixed;
-      top: 8px;
-      right: 12px;
-      z-index: 45;
-      width: 40px;
-      height: 40px;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.9);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
-      font-size: 26px;
-      line-height: 1;
-      color: #1a1a1a;
-      cursor: pointer;
-    }
-
     /* the editorial canvas reflows into one column in DOM order, which
        is the order the blocks were authored in (top of page downward) */
     .project-editorial-wrap { overflow: visible; }
@@ -2694,7 +2737,16 @@
       font-size: 15px;
       line-height: 1.7;
     }
-    .project-editorial-block .project-gallery-label { opacity: 1; }
+    /* per-image caption text. Desktop only ever reveals these on hover,
+       so on a touch screen -- which has no hover -- matching it means not
+       showing them at all; this rule used to do the opposite, pinning the
+       editorial blocks' labels permanently on, and was the one place the
+       two diverged. display:none rather than opacity:0 so a sticky :hover
+       can't flash them back (iOS keeps :hover applied to the last-tapped
+       element until you tap elsewhere): that hover rule is the more
+       specific of the two, but it only sets opacity, and there is no box
+       left for it to fade in. */
+    .project-gallery-label { display: none; }
 
     /* non-editorial project pages */
     .project-info { padding: 0 20px; margin-top: 26px; }
@@ -3193,6 +3245,32 @@
   }, { passive: false });
   window.addEventListener('touchend', () => { dragging = false; });
 
+  // ---------------- mobile: page scroll drives the signature's yaw ----------------
+  // On mobile the mark is a fixed backdrop behind a scrolling column, so
+  // scrolling is the one continuous gesture the page always has -- tying it
+  // to yaw gives the whole page the orbit control desktop gets from
+  // dragging the model directly, which a phone has no room for.
+  // Deliberately a function of scroll *position*, not accumulated deltas:
+  // the angle is then a pure readout of how far down the page you are, so
+  // scrolling back up unwinds it exactly, and returning to an offset always
+  // shows the same pose. Accumulating deltas would drift instead, ending at
+  // a different angle every time you arrived at the same place.
+  const SCROLL_YAW_PER_PX = 0.0022;     // ~100 degrees per phone-screen of scroll
+  const SCROLL_YAW_SMOOTH_RATE = 9;     // well above ORBIT_SMOOTH_RATE: this should track the finger, not trail behind it
+  let scrollYawTarget = 0;
+  let scrollYaw = 0;
+  window.addEventListener('scroll', () => {
+    // read in the listener rather than in frame(): touching scrollY mid-
+    // render can force a synchronous layout, and a passive listener already
+    // delivers the value at exactly the rate it actually changes
+    const mob = !!(window.__isMobile && window.__isMobile());
+    scrollYawTarget = mob ? (window.scrollY || 0) * SCROLL_YAW_PER_PX : 0;
+    // scrolling counts as interaction -- without this the mark would turn
+    // while still rendering its idle, de-energised pose, which reads as a
+    // dead object being pushed rather than a live one responding
+    if (mob) activate();
+  }, { passive: true });
+
   window.addEventListener('click', () => { burstUntil = performance.now() + 300; });
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space') { e.preventDefault(); clearBuffers(); }
@@ -3260,9 +3338,30 @@
     smoothYaw += (orbitYaw - smoothYaw) * orbitEase;
     smoothPitch += (orbitPitch - smoothPitch) * orbitEase;
 
+    // mobile changes both the signature's composition (see the rest-offset
+    // and scale notes below) and what can drive it: it is the one layout
+    // where the page scrolls, and that scroll feeds the yaw just below.
+    const sigMobile = !!(window.__isMobile && window.__isMobile());
+
+    // a window resized up into the desktop layout stops scrolling
+    // altogether, so no scroll event would ever fire again to unwind an
+    // angle the mobile layout left behind -- retarget to zero here and let
+    // it ease out through the same filter instead of snapping.
+    if (!sigMobile) scrollYawTarget = 0;
+    scrollYaw += (scrollYawTarget - scrollYaw) * (1 - Math.exp(-SCROLL_YAW_SMOOTH_RATE * dt));
+
     // -------- undulating position / orbit for the model, scaled by energy so it
     // returns smoothly to the static, unaltered, centered pose when idle --------
-    const orbitX = energy * (0.35 * Math.sin(at * 0.17) + smoothYaw);
+    // scrollYaw is added outside the energy multiplier, unlike every other
+    // term here, and that is the whole point: the scroll angle has to
+    // survive the idle decay, or the mark would unwind to centre a second
+    // and a half after your finger stops while the page is still sitting
+    // halfway down -- the rotation would read as a fading reaction to
+    // scrolling rather than as something the scroll position holds. Energy
+    // still governs the undulation and the drag orbit, so at rest the mark
+    // settles to exactly the angle its scroll offset asks for, and nothing
+    // else moves.
+    const orbitX = energy * (0.35 * Math.sin(at * 0.17) + smoothYaw) + scrollYaw;
     const orbitY = energy * (0.22 * Math.cos(at * 0.13) + smoothPitch);
     const bobX = energy * 0.12 * Math.sin(at * 0.31);
     const bobY = energy * 0.08 * Math.cos(at * 0.27 + 1.3);
@@ -3273,7 +3372,6 @@
     // column -- so it sits dead centre of the screen rather than being
     // pushed down into the desktop layout's lower third, and it renders
     // 15% smaller so it reads as a mark rather than filling the frame.
-    const sigMobile = !!(window.__isMobile && window.__isMobile());
 
     // constant vertical shift applied on top of the idle/interaction bob --
     // this is what actually moves the resting position; more negative pushes
@@ -3292,8 +3390,9 @@
     const eye = [0, 0, dist];
     const view = mat4LookAt(eye, [0, 0, 0], [0, 1, 0]);
 
-    // 1.56 is the desktop size; mobile takes 15% off it (1.56 * 0.85)
-    let model = mat4Scale(sigMobile ? 1.326 : 1.56);
+    // 1.56 is the desktop size; mobile takes 15% off it and then a
+    // further 20% off that result (1.56 * 0.85 * 0.8)
+    let model = mat4Scale(sigMobile ? 1.0608 : 1.56);
     model = mat4Multiply(mat4RotationY(energy * at * 0.14 + orbitX), model);
     model = mat4Multiply(mat4RotationX(energy * 0.15 * Math.sin(at * 0.19) + orbitY), model);
     model = mat4Multiply(mat4RotationZ(energy * 0.06 * Math.sin(at * 0.07)), model);
@@ -3520,12 +3619,12 @@
   <div class="about-view">
     <div class="about-frame"></div>
     <div class="about-info">
-      <p class="about-paragraph">is a Los Angeles&ndash;based writer, director and motion designer who doesn&rsquo;t like talking about his escape from the retiree paradise of Scottsdale, Arizona, where he was ostracized for skateboarding by mall cops and HOA representatives.</p>
+      <p class="about-paragraph">Los Angeles&ndash;based writer, director and motion designer who doesn&rsquo;t like talking about his escape from the retiree paradise of Scottsdale, Arizona, where he was ostracized for skateboarding by mall cops and HOA representatives.</p>
       <p class="about-paragraph">Greg brings a craft-focused approach to his maximalistic style of filmmaking, often incorporating technical tools and experimental processes in his productions. However extravagant his work tends to be, he tells funny stories about the human experience.</p>
       <p class="about-paragraph">His surreal, absurdist comedy What the Heck Is Going On. screened at Palm Springs ShortFest and won the Industry Choice Award at Dances With Films which landed it on the 98th Oscars longlist.</p>
       <p class="about-paragraph">Through his decade plus career in design, animation, and visual effects, Greg has contributed to projects that have garnered hundreds of millions of viewers &mdash; Super Bowl campaigns for Pepsi and Kawasaki, stage visuals for The Game Awards and SZA, music videos for Beck and Yellowcard, among many other household names.</p>
       <p class="about-paragraph">Greg is always up to make new friends and share stories. If you&rsquo;d like to get in touch or chat, he&rsquo;d be more than happy to receive a hello.</p>
-      <p class="about-paragraph">You can reach him at <a href="mailto:Gregrubner@gmail.com">Gregrubner@gmail.com</a></p>
+      <p class="about-paragraph">You can reach him at <a href="mailto:gregrubner@gmail.com">gregrubner@gmail.com</a></p>
     </div>
   </div>
 </main>
@@ -3534,11 +3633,6 @@
      lays out in real viewport pixels and can scroll independently.
      Hidden by default; opened/populated by the script below. -->
 <div class="project-view" aria-hidden="true">
-  <!-- mobile-only: on desktop a project is dismissed by clicking the
-       margin around it or pressing Escape, neither of which a phone
-       offers -- the content is full-bleed there, so there is no margin
-       left to tap. Shown only inside the mobile media block. -->
-  <button type="button" class="project-close-mobile" aria-label="Close project">&times;</button>
   <div class="project-content">
     <div class="project-hero"></div>
     <div class="project-info">
@@ -5268,9 +5362,6 @@
       if (e.target === view) closeProject();
     });
 
-    var closeBtn = document.querySelector('.project-close-mobile');
-    if (closeBtn) closeBtn.addEventListener('click', closeProject);
-
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeProject();
     });
@@ -5571,9 +5662,19 @@
     });
     window.addEventListener('resize', resettle);
 
+    // the tilde is the back control while a project is open -- on mobile
+    // it is the only one, since the phone layout is full-bleed (no margin
+    // to tap past the content) and has no Escape key.
     if (tildeGlyph) {
-      tildeGlyph.addEventListener('click', function () {
+      tildeGlyph.addEventListener('click', function (e) {
         if (window.__isProjectViewActive && window.__isProjectViewActive() && window.__closeProject) {
+          // the same tap would otherwise carry on to the zone's tap-toggle
+          // below (the glyph sits inside the zone) and leave the nav menu
+          // hanging open over the page you just came back to. Stopping it
+          // here makes one tap mean exactly one thing. The cost is the
+          // window-level click that triggers the melter's burst, which
+          // also stops -- imperceptible on a tap that is navigating away.
+          e.stopPropagation();
           window.__closeProject();
         }
       });
