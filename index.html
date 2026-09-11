@@ -3881,10 +3881,14 @@
           { left: 0, top: 9586, width: 1920, height: 809, src: 'assets/wthigo/WTHIGO-Embrace.jpg', label: 'Embrace' }
         ]
       },
-      // rendered once from assets/WTHIGO-TextbookZine_v003.pdf (52pp,
+      // rendered once from WTHIGO-TextbookZine_v003.pdf (52pp,
       // 504x648pt) at 150dpi via PyMuPDF -- 1050x1350 JPGs, page-01.jpg
-      // .. page-52.jpg. Pre-rendered to plain images rather than
-      // parsing the 56MB PDF client-side with pdf.js on every visit --
+      // .. page-52.jpg. That source PDF is deliberately NOT in this repo
+      // (56MB, and nothing here ever fetched it -- only this comment
+      // named it); it is kept outside the project, and re-rendering the
+      // pages at any other size needs that original back. Pre-rendered
+      // to plain images rather than parsing the PDF client-side with
+      // pdf.js on every visit --
       // see buildFlipbook/openProject for how these get handed to
       // St.PageFlip. Label carries the reference's own caption copy
       // (normally a short title like "The Textbook Zine" -- this page
