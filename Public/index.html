@@ -640,7 +640,27 @@
   .thumb-reel     { transition: transform 0.58s cubic-bezier(0.3, 0.1, 0.3, 1); }
   .thumb-circular { transition: transform 1.8s cubic-bezier(0.7, 0, 0.2, 1); }
 
-  .stage.showing-design .thumb-hero     { transform: scale(0); }
+  /* 0.0001 rather than a plain 0, and it is load-bearing. scale(0)
+     builds a singular matrix, and the moment this thumb has to animate
+     to a target written with a DIFFERENT transform function -- which is
+     every route out of Design except back Home: translateX(-106px) for
+     .showing-direction, translateX(-1160px) for .showing-about -- the
+     two function lists no longer match, so the browser can only
+     interpolate the decomposed matrices. A zero-determinant matrix
+     cannot be decomposed, and the spec's fallback there is DISCRETE
+     interpolation: measured in Chrome, scale(0) -> translateX(-106px)
+     holds the start value to the halfway mark and then flips straight
+     to the end, which is the hero popping into place while the other
+     two thumbs slide normally. 0.0001 makes the matrix invertible, so
+     the same pair interpolates smoothly (0.25/0.50/0.75 sample exactly
+     linear), and at this size it is 769px * 0.0001 = 0.08px -- far
+     under a device pixel, so nothing about the Design view changes.
+     Home <-> Design never showed this: `none` is substituted with the
+     other side's own function list (scale(1)), so those two always
+     matched and never needed decomposing. Direction -> Design doesn't
+     either -- .design-from-direction.showing-design overrides this
+     whole declaration with a translate (see that rule). */
+  .stage.showing-design .thumb-hero     { transform: scale(0.0001); }
   .stage.showing-design .thumb-pamlove  { transform: translateY(412px); }
   .stage.showing-design .thumb-dating   { transform: translateX(-743px); transition-delay: 0.13s; }
   .stage.showing-design .thumb-pink,
@@ -1098,112 +1118,132 @@
     transition-delay: 1.596s;
   }
 
-  /* ---------- Design -> Direction: literal time-reversal of the above ----------
-     no reference records the return trip, so rather than invent a
-     second set of numbers this mirrors the one above through time: a
-     segment running forward over [d, d+D] runs in reverse over
-     [T-d-D, T-d] at the same duration, and a cubic-bezier's reverse is
-     (1-p2x, 1-p2y, 1-p1x, 1-p1y). T = 2.865s, the last thing still
-     moving forward (design-thumb-7, 1.796s + 1.069s), so every delay
-     below is 2.865s minus that element's own forward finish.
-     Whatever finished LAST going out moves FIRST coming back, so the
-     grid unwinds from the inside out -- cell 7 leads at 0s and cell 1
-     is last at 0.797s, the exact reverse of the spiral -- and the three
-     thumbs slide back in only once the grid has largely gone: dating
-     last at 2.023s, having been the first to leave.
-     The thumbs need no transform of their own here: .showing-direction
-     supplies each one's resting transform (and origin) as the target,
-     and the Design-side transform they animate FROM is still live when
-     the classes swap. dating's `left` is in the transition list because
-     arriving from a Design that was NOT reached via Direction it starts
-     at the base 550 rather than 847, and would otherwise snap 297px
-     sideways on the first frame. */
-  .stage.direction-from-design .thumb-hero {
-    transition: transform 1.341s cubic-bezier(0.5, 0.06, 0.374, 0.982);
-    transition-delay: 1.5s;
-  }
-  .stage.direction-from-design .thumb-circular {
-    transform-origin: 0 0;
-    transition: transform 0.925s cubic-bezier(0.613, 0.207, 0.399, 0.983);
-    transition-delay: 1.922s;
-  }
+  /* ---------- Design -> Direction ----------
+     Fitted frame by frame off REF/HomePage-Tranistion Design 2 Direction.mp4
+     (30fps, 88 frames), NOT time-reversed off the outbound route as this
+     block used to be -- that mirror turned out to describe a different
+     animation entirely. Where the reversal had the grid unwind inside-out
+     (cell 7 first, cell 1 last) and held the thumbs back until the grid
+     had cleared, the reference fades the grid from the top-left corner
+     outward and starts the thumbs while it is still going.
+
+     Method, as for the routes above: every edge tracked to sub-pixel
+     precision inside the grid's own gutters (rows 408-437 for the hero's
+     right edge, columns 950-981 for dating's top, columns 1366-1397 for
+     circular's), which carry no cell content and so stay clean while the
+     grid is still fading over them. Cell alpha measured with the tracked
+     thumb rects masked out. Circular is fitted from BOTH its edges at
+     once -- its bottom while its top is still above the viewport, its top
+     afterwards -- and that is what pins its onset; fitting the visible
+     half alone put it 0.28s late. The joint fit recovers its height as
+     334.8px against a geometric 335, which is the check that the model is
+     right and not merely well-behaved.
+
+     The reference renders its three thumbs 106px right of where Direction
+     actually sits (its wordmark is pixel-identical, so the frame is not
+     offset -- the composition is). Timing, travel and easing below come
+     from it; the landing positions are the established .showing-direction
+     ones. Those are also already the start positions
+     .design-from-direction parks the thumbs at, so this block is purely
+     timing and sets no transforms of its own.
+
+     The three thumbs launch staggered (0.602 / 0.840 / 0.891) and land
+     together (2.265 / 2.288 / 2.301, a 36ms spread): what is tuned is the
+     durations, not the arrivals. Each ramps the same way, peaking at
+     14-18% of its travel and covering ~86% of the distance in its first
+     half -- a hard launch into a long settle. Curves are quoted as
+     fitted; circular's y1 of -0.1 is a slight anticipation, not noise
+     (R2 to six places, 0.09px rmse). */
   .stage.direction-from-design .thumb-dating {
     transform-origin: 100% 0;
-    transition: transform 0.842s cubic-bezier(0.887, 0.126, 0.396, 0.992) 2.023s,
-                left 0.842s cubic-bezier(0.887, 0.126, 0.396, 0.992) 2.023s;
+    /* left rides the same curve as transform: arriving from a Design that
+       was NOT reached via Direction it starts at the base 550 rather than
+       847, and would otherwise snap 297px sideways on the first frame */
+    transition: transform 1.663s cubic-bezier(0.25, 0.116, 0.05, 0.988) 0.602s,
+                left 1.663s cubic-bezier(0.25, 0.116, 0.05, 0.988) 0.602s;
+  }
+  .stage.direction-from-design .thumb-hero {
+    transition: transform 1.448s cubic-bezier(0.272, 0.057, 0.097, 0.994);
+    transition-delay: 0.84s;
+  }
+  /* transform-origin restated on both of these (it otherwise only lives
+     under .showing-direction, which is not yet applied when this starts)
+     or the still-scaled matrix gets re-anchored around the box's centre
+     and throws it sideways before it moves -- the same failure
+     .stage.leaving-direction documents. */
+  .stage.direction-from-design .thumb-circular {
+    transform-origin: 0 0;
+    transition: transform 1.41s cubic-bezier(0.437, -0.1, 0.184, 1);
+    transition-delay: 0.891s;
   }
 
+  /* The grid fade: one shared duration and curve with per-cell delays,
+     fitted across all twelve at R2=0.99941 over 808 samples, so this is
+     one cascade rather than twelve separately-timed fades. The curve is
+     close to linear (46% faded at the halfway point) with a gentle ease
+     at either end. The order is a wipe out of the top-left corner: cell 1
+     leads, its two neighbours follow, and it spreads down and to the
+     right, reaching cell 12 nearly a second later. */
   .stage.direction-from-design .design-thumb {
-    transition: opacity 1.069s cubic-bezier(0.984, 0, 0.84, 0.757);
+    transition: opacity 1.136s cubic-bezier(0.133, 0.127, 0, -0.095);
   }
-  .stage.direction-from-design .design-thumb-7  { transition-delay: 0s; }
-  .stage.direction-from-design .design-thumb-6  { transition-delay: 0.067s; }
-  .stage.direction-from-design .design-thumb-9  { transition-delay: 0.3s; }
-  .stage.direction-from-design .design-thumb-10 { transition-delay: 0.366s; }
-  .stage.direction-from-design .design-thumb-11 { transition-delay: 0.433s; }
-  .stage.direction-from-design .design-thumb-12 { transition-delay: 0.5s; }
-  .stage.direction-from-design .design-thumb-8  { transition-delay: 0.567s; }
-  .stage.direction-from-design .design-thumb-4  { transition-delay: 0.624s; }
-  .stage.direction-from-design .design-thumb-3  { transition-delay: 0.682s; }
-  .stage.direction-from-design .design-thumb-2  { transition-delay: 0.74s; }
-  .stage.direction-from-design .design-thumb-1  { transition-delay: 0.797s; }
-  /* cell 5's own base rule sets opacity:1 (its wrap-around parked
-     state), so it has to be told to fade out here like every other cell
-     rather than inheriting that.
-     The transform is NOT left at none, even though none is what it
-     mirrors: this class comes off on a 2.9s timer, and the moment it
-     does, the base rule underneath reasserts opacity:1 with no
-     transition on opacity at all -- so cell 5 popped back to fully
-     opaque in its grid slot and slid off to the left on the base 0.62s
-     curve, a whole second after the transition had visibly finished.
-     Parking it at the base rule's own -534px instead (instantly, via a
-     0s transition delayed to the exact moment the fade ends at
-     0.2+1.069s, while it is already at opacity 0 and cannot be seen)
-     makes dropping the class the no-op the rest of this block already
-     is. */
+  .stage.direction-from-design .design-thumb-1  { transition-delay: 0s; }
+  .stage.direction-from-design .design-thumb-2  { transition-delay: 0.093s; }
+  .stage.direction-from-design .design-thumb-6  { transition-delay: 0.143s; }
+  .stage.direction-from-design .design-thumb-9  { transition-delay: 0.168s; }
+  .stage.direction-from-design .design-thumb-3  { transition-delay: 0.303s; }
+  .stage.direction-from-design .design-thumb-7  { transition-delay: 0.371s; }
+  .stage.direction-from-design .design-thumb-4  { transition-delay: 0.372s; }
+  .stage.direction-from-design .design-thumb-11 { transition-delay: 0.419s; }
+  .stage.direction-from-design .design-thumb-10 { transition-delay: 0.463s; }
+  .stage.direction-from-design .design-thumb-8  { transition-delay: 0.604s; }
+  .stage.direction-from-design .design-thumb-12 { transition-delay: 0.959s; }
+  /* cell 5's own base rule sets opacity:1 (its wrap-around parked state),
+     so it has to be told to fade out here like every other cell rather
+     than inheriting that. The transform is NOT left at none: this class
+     comes off on a timer, and the moment it does the base rule underneath
+     reasserts opacity:1 with no transition on opacity at all -- so cell 5
+     popped back to fully opaque in its grid slot and slid off to the left
+     on the base 0.62s curve, a whole second after the transition had
+     visibly finished. Parking it at the base rule's own -534px instead
+     (instantly, via a 0s transition delayed to the exact moment its own
+     fade ends, 0.134 + 1.136) makes dropping the class the no-op the rest
+     of this block already is. */
   .stage.direction-from-design .design-thumb-5 {
     opacity: 0;
     transform: translateX(-534px);
-    transition: opacity 1.069s cubic-bezier(0.984, 0, 0.84, 0.757) 0.2s,
-                transform 0s linear 1.269s;
+    transition: opacity 1.136s cubic-bezier(0.133, 0.127, 0, -0.095) 0.134s,
+                transform 0s linear 1.27s;
   }
 
   /* the three thumbs spend most of this route off-screen flying back in
-     (dating does not start until 2.023s), so they must not be clickable
-     the whole way -- the forward route gets this for free from
-     .stage.showing-design .thumb, which kills every thumb's hit area
-     for the entire exit. Same idea, mirrored. */
+     (dating does not start until 0.602s), so they must not be clickable
+     the whole way -- the outbound route gets this for free from
+     .stage.showing-design .thumb, which kills every thumb's hit area for
+     the entire exit. Same idea here. */
   .stage.direction-from-design .thumb {
     pointer-events: none;
   }
 
-  /* the header label swap was the one part of this route still not
-     mirrored: it fell through to its own base/showing-direction
-     timings, so "Design" started dissolving on the very first frame
-     and "Direction" arrived at 0.6s -- while the grid was still
-     standing and none of the three thumbs had moved. Forward, the swap
-     lands at the END of the move (direction-lead out over [0, 0.4] on
-     the shared base 0.4s ease, design-lead in over [0.9, 1.3]), so
-     reversed against the same T = 2.865s the rest of this block uses,
-     it belongs at the end coming back too: design-lead out over
-     [1.565, 1.965], direction-lead in over [2.465, 2.865] -- settling
-     exactly as dating finishes its slide, the mirror of the label
-     arriving with the grid cascade going the other way.
-     `ease` is cubic-bezier(0.25, 0.1, 0.25, 1); its reverse is
-     (0.75, 0, 0.75, 0.9), the same (1-p2x, 1-p2y, 1-p1x, 1-p1y) rule
-     every other curve in this block is mirrored by.
-     Opacity targets aren't restated: the base rule already gives
-     design-lead its 0 and .showing-direction gives direction-lead its
-     1, so these are timing-only like everything else under
-     .direction-from-design -- which is why dropping the class on its
-     2.9s timer changes nothing visually. */
+  /* The reference carries no header lead-in at all -- its slot beside the
+     wordmark measures zero ink across all 88 frames -- so there is nothing
+     to fit these against. They keep the outbound route's own relationship
+     to the end of the move (direction-lead out over [0, 0.4], design-lead
+     in over [0.9, 1.3]) reversed against this route's new total of 2.301s
+     rather than the 2.865s the old mirror used: design-lead out over
+     [1.001, 1.401], direction-lead in over [1.901, 2.301], settling as the
+     last thumb lands. The base ease is cubic-bezier(0.25, 0.1, 0.25, 1);
+     its reverse is (0.75, 0, 0.75, 0.9). Opacity targets are not restated
+     -- the base rule already gives design-lead its 0 and
+     .showing-direction gives direction-lead its 1 -- so these stay
+     timing-only like the rest of this block. */
   .stage.direction-from-design .line-design-lead span {
     transition: opacity 0.4s cubic-bezier(0.75, 0, 0.75, 0.9);
-    transition-delay: 1.565s;
+    transition-delay: 1.001s;
   }
   .stage.direction-from-design .line-direction-lead span {
     transition: opacity 0.4s cubic-bezier(0.75, 0, 0.75, 0.9);
-    transition-delay: 2.465s;
+    transition-delay: 1.901s;
   }
 
   .design-thumb:hover .thumb-label {
@@ -3982,6 +4022,16 @@
         { src: 'assets/CMThumb.jpg', videoSrc: 'https://player.vimeo.com/video/478687825?badge=0&autopause=0&player_id=0&app_id=58479', label: 'Pink $ock - Circular Motion' }
       ],
       editorial: {
+        // Third deliberate departure. The hero sits at top 115 rather
+        // than the reference's 155: every other editorial page pins its
+        // hero there (16:9 and cinematic alike -- see Freediver, iPhone
+        // 17 Pro, Because One Day, which share this one's short hero),
+        // and that shared top edge is what lines the hero up with the
+        // tilde in .nav-layer. This page was the only one 40px below it.
+        // The whole stack -- hero, title, description, blocks,
+        // canvasHeight -- moved up those 40px together, so every gap
+        // below is exactly as it was; only the page's start moved.
+        //
         // Second deliberate departure from the reference (the first
         // being the cinematic-hero shift above): the block stack is
         // shifted up a further 169px as one rigid unit so the first
@@ -3993,42 +4043,48 @@
         // every gap/gutter measured off the reference stays as
         // designed, just translated -- canvasHeight included, still
         // flush against the closing full-bleed's bottom edge.
-        canvasHeight: 8569,
-        hero: { left: 300, top: 155, width: 1325, height: 563 },
-        title: { left: 300, top: 748, fontSize: 37 },
-        description: { left: 1028, top: 828, width: 600 },
+        canvasHeight: 8529,
+        // opts this page into the runtime hero/~ alignment in
+        // layoutEditorialCanvas (see its comment for why a fixed
+        // hero.top cannot hold across window shapes). The 115 below
+        // stays as the first-paint value and the baseline that nudge is
+        // measured from; only this page asks for it so far.
+        alignHeroToTilde: true,
+        hero: { left: 300, top: 115, width: 1325, height: 563 },
+        title: { left: 300, top: 708, fontSize: 37 },
+        description: { left: 1028, top: 788, width: 600 },
         blocks: [
           // secondary video under the title/description row
-          { left: 300, top: 969, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS1_StudioCarRig_web.mp4', label: 'Lighting Rig' },
+          { left: 300, top: 929, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS1_StudioCarRig_web.mp4', label: 'Lighting Rig' },
           // full-bleed 1: driving with the instruments
-          { left: 0, top: 1389, width: 1920, height: 820, src: 'assets/circular-motion/CM_DrivingGuitars.jpg', label: 'Circular Motion' },
+          { left: 0, top: 1349, width: 1920, height: 820, src: 'assets/circular-motion/CM_DrivingGuitars.jpg', label: 'Circular Motion' },
           // second block of body copy
-          { left: 300, top: 2339, width: 600, text: 'This project was a labor of passion, donations and truly DIY. A custom lighting system built on the Arduino platform was created to visualize the melody in camera. We shot footage of PCH and Alabama Hills out the rear of a friend’s truck that was rear projected and sync’d with the lights. We choreographed this on a stage, shooting at double speed to give the whole orchestration a gloss layer of etherealism.' },
+          { left: 300, top: 2299, width: 600, text: 'This project was a labor of passion, donations and truly DIY. A custom lighting system built on the Arduino platform was created to visualize the melody in camera. We shot footage of PCH and Alabama Hills out the rear of a friend’s truck that was rear projected and sync’d with the lights. We choreographed this on a stage, shooting at double speed to give the whole orchestration a gloss layer of etherealism.' },
           // first staggered mini-gallery
-          { left: 1030, top: 2294, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS3_CarBTS_web.mp4', label: 'On Set' },
-          { left: 300, top: 2629, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS4_PCHDrive_web.mp4', label: 'PCH' },
-          { left: 985, top: 2964, width: 635, height: 270, src: 'assets/circular-motion/CM_SynthHands.jpg', label: 'Synth' },
-          { left: 550, top: 3014, width: 385, height: 215, src: 'assets/circular-motion/CM_LogoGlow.jpg', localVideoSrc: 'assets/circular-motion/PSCM-Logo-Loop.mp4', label: 'Logo' },
-          { left: 985, top: 3274, width: 410, height: 175, src: 'assets/circular-motion/CM_DrivingGuitars.jpg', label: 'Driving' },
+          { left: 1030, top: 2254, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS3_CarBTS_web.mp4', label: 'On Set' },
+          { left: 300, top: 2589, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS4_PCHDrive_web.mp4', label: 'PCH' },
+          { left: 985, top: 2924, width: 635, height: 270, src: 'assets/circular-motion/CM_SynthHands.jpg', label: 'Synth' },
+          { left: 550, top: 2974, width: 385, height: 215, src: 'assets/circular-motion/CM_LogoGlow.jpg', localVideoSrc: 'assets/circular-motion/PSCM-Logo-Loop.mp4', label: 'Logo' },
+          { left: 985, top: 3234, width: 410, height: 175, src: 'assets/circular-motion/CM_DrivingPinkCar.jpg', label: 'Driving' },
           // full-bleed 2: the band, instruments in hand
-          { left: 0, top: 3634, width: 1920, height: 820, src: 'assets/circular-motion/CM_BandIntimate.jpg', label: 'The Band' },
+          { left: 0, top: 3594, width: 1920, height: 820, src: 'assets/circular-motion/CM_BandIntimate.jpg', label: 'The Band' },
           // second staggered mini-gallery
-          { left: 1030, top: 4539, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS2_StudioCrew_web.mp4', label: 'Studio' },
-          { left: 300, top: 4919, width: 595, height: 250, localVideoSrc: 'assets/circular-motion/CM_BTS6_PinkGrille_web.mp4', label: 'Grille' },
-          { left: 1030, top: 5169, width: 595, height: 235, localVideoSrc: 'assets/circular-motion/CM_BTS5_RedGrille_web.mp4', label: 'Pink $ock' },
-          { left: 605, top: 5204, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_BTS7_DarkStage_web.mp4', label: 'On Stage' },
-          { left: 935, top: 5444, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_BTS8_BandOnStage_web.mp4', label: 'Rehearsal' },
-          { left: 300, top: 5444, width: 595, height: 315, localVideoSrc: 'assets/circular-motion/CM_Playblast_Tracking_web.mp4', label: 'Light Tracking' },
-          { left: 1030, top: 5759, width: 590, height: 315, src: 'assets/circular-motion/CM_LightStreaks.jpg', label: 'Light Trails' },
+          { left: 1030, top: 4499, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS2_StudioCrew_web.mp4', label: 'Studio' },
+          { left: 300, top: 4879, width: 595, height: 250, localVideoSrc: 'assets/circular-motion/CM_BTS6_PinkGrille_web.mp4', label: 'Grille' },
+          { left: 1030, top: 5129, width: 595, height: 235, localVideoSrc: 'assets/circular-motion/CM_BTS5_RedGrille_web.mp4', label: 'Pink $ock' },
+          { left: 605, top: 5164, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_BTS7_DarkStage_web.mp4', label: 'On Stage' },
+          { left: 935, top: 5404, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_BTS8_BandOnStage_web.mp4', label: 'Rehearsal' },
+          { left: 300, top: 5404, width: 595, height: 315, localVideoSrc: 'assets/circular-motion/CM_Playblast_Tracking_web.mp4', label: 'Light Tracking' },
+          { left: 1030, top: 5719, width: 590, height: 315, localVideoSrc: 'assets/circular-motion/CM_BTS13_web.mp4', label: 'Light Trails' },
           // full-bleed 3: neon highway
-          { left: 0, top: 6159, width: 1920, height: 820, src: 'assets/circular-motion/CM_NeonHighway.jpg', label: 'Circular Motion' },
+          { left: 0, top: 6119, width: 1920, height: 820, src: 'assets/circular-motion/CM_NeonHighwayAlt.jpg', label: 'Circular Motion' },
           // third staggered mini-gallery
-          { left: 295, top: 7039, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS9_ArduinoLights_web.mp4', label: 'Custom Rig' },
-          { left: 935, top: 7104, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_BTS12_UniqueShot_web.mp4', label: 'David & Hudson' },
-          { left: 1025, top: 7354, width: 600, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS11_CloudSwirl_web.mp4', label: 'Portal' },
-          { left: 595, top: 7419, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_PixelLips_web.mp4', label: 'Pixel' },
+          { left: 295, top: 6999, width: 595, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS9_ArduinoLights_web.mp4', label: 'Custom Rig' },
+          { left: 935, top: 7064, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_BTS12_UniqueShot_web.mp4', label: 'David & Hudson' },
+          { left: 1025, top: 7314, width: 600, height: 335, localVideoSrc: 'assets/circular-motion/CM_BTS11_CloudSwirl_web.mp4', label: 'Portal' },
+          { left: 595, top: 7379, width: 385, height: 215, localVideoSrc: 'assets/circular-motion/CM_PixelLips_web.mp4', label: 'Pixel' },
           // closing full-bleed
-          { left: 0, top: 7749, width: 1920, height: 820, src: 'assets/circular-motion/CM_ClosingGrille.jpg', label: 'Pink $ock' }
+          { left: 0, top: 7709, width: 1920, height: 820, src: 'assets/circular-motion/CM_ClosingGrille.jpg', label: 'Pink $ock' }
         ]
       }
     },
@@ -4085,9 +4141,10 @@
       // buildEditorialCanvas below (see its comment, and the CSS
       // comment on .project-editorial-canvas) instead of the default
       // gallery grid every other project still uses. left/top/width/
-      // height throughout are canvas-space px (1920x5348) measured
-      // directly off REF/Pamela Love Page.jpg with a connected-
-      // component scan, not eyeballed.
+      // height throughout are canvas-space px measured directly off
+      // REF/Pamela Love Page v2.jpg (1920x6461) with a connected-
+      // component scan, not eyeballed. v2 supersedes the original
+      // REF/Pamela Love Page.jpg this was first built from.
       layout: 'editorial',
       // hero poster is the video's own Vimeo cover (oEmbed thumbnail_url),
       // not the PamL.jpg grid-tile crop -- see openProject's heroPoster swap
@@ -4096,35 +4153,50 @@
         { src: 'assets/PamL.jpg', videoSrc: 'https://player.vimeo.com/video/818877601?badge=0&autopause=0&player_id=0&app_id=58479', label: 'Motion Design Reel' }
       ],
       editorial: {
-        // One deliberate departure from REF/Pamela Love Page.jpg: the
-        // block stack is shifted up 130px as one rigid unit so the
+        // One deliberate departure from REF/Pamela Love Page v2.jpg:
+        // the block stack is shifted up 157px as one rigid unit so the
         // first block's top edge sits flush with the BOTTOM of the
         // description, the site-wide convention (see Riot Games),
         // instead of the reference's own header gap. This description
         // sets 7 lines at 14.25px/1.65 line-height in Sorts Mill Goudy
         // = 164.5px, so it runs 990 -> 1154.5 and the first block is
-        // parked at 1155. Every gap/gutter measured off the reference
-        // is untouched -- the whole stack translated, nothing
-        // re-derived -- and canvasHeight moved with it, still flush
-        // against the closing full-bleed's bottom edge.
-        canvasHeight: 5215,
+        // parked at 1155; v2 scans that block at 1312, hence the 157.
+        // (v1 of the reference needed 130 here -- the constant tracks
+        // the reference's own header gap, so it is re-derived whenever
+        // the reference is replaced, not carried over.) Every
+        // gap/gutter measured off the reference is untouched -- the
+        // whole stack translated, nothing re-derived -- and
+        // canvasHeight moved with it (5382 - 157 + 1075 = 6300), still
+        // flush against the closing full-bleed's bottom edge.
+        canvasHeight: 6300,
         hero: { left: 300, top: 115, width: 1325, height: 750 },
         title: { left: 300, top: 897, fontSize: 37 },
         description: { left: 1028, top: 990, width: 600 },
         blocks: [
-          // large secondary video, left-aligned under the title/description row
-          { left: 300, top: 1155, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/Pam_Sh010_v002_web.mp4', label: 'Shot 010' },
+          // opening trio, staggered left/right/left -- the three loops
+          // REF/Pamela Love Page v2.jpg adds above the full-bleed. Their
+          // arrival is what pushes everything below down: v1 ran one
+          // video here (Shot 010, now relocated under the full-bleed --
+          // see below) straight into the scarab break.
+          { left: 300, top: 1155, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/PamLove_GIF2_web.mp4', label: 'Threaded Flower' },
+          { left: 1030, top: 1490, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/PamLove_GIF1_web.mp4', label: 'Spiral' },
+          { left: 300, top: 1825, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/PamLove_GIF3_web.mp4', label: 'Ear Detail' },
           // full-bleed detail break
-          { left: 0, top: 1560, width: 1920, height: 1080, src: 'assets/pamelove-threaded-jewelry/Frame_ScarabCU_0003.jpg', label: 'Scarab Detail' },
-          // staggered mini-gallery
-          { left: 1030, top: 2710, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/PamelaLove_PB_Rose_v001_web.mp4', label: 'Rose' },
-          { left: 300, top: 3045, width: 595, height: 335, src: 'assets/pamelove-threaded-jewelry/Frame_FlowerCloseUp_00001.jpg', label: 'Flower Detail' },
-          { left: 1030, top: 3380, width: 595, height: 335, src: 'assets/pamelove-threaded-jewelry/Frame_EndLockUp_Day_00001.jpg', label: 'End Lock-Up — Day' },
-          { left: 605, top: 3410, width: 385, height: 220, src: 'assets/pamelove-threaded-jewelry/Frame_EyeCloseUp_00001.jpg', label: 'Eye Detail' },
-          { left: 300, top: 3725, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/PamelaLove_PB_Sh020_v004_web.mp4', label: 'Shot 020' },
-          { left: 935, top: 3750, width: 385, height: 215, src: 'assets/pamelove-threaded-jewelry/Frame_EndLockUp_v004_00001.jpg', label: 'End Lock-Up — Sunset' },
+          { left: 0, top: 2277, width: 1920, height: 1080, src: 'assets/pamelove-threaded-jewelry/Frame_ScarabCU_0003.jpg', label: 'Scarab Detail' },
+          // staggered mini-gallery. Same eight pieces as v1 in the same
+          // rects, but v2 re-sequences them: Shot 010 drops from the top
+          // of the page to the head of this group, and End Lock-Up —
+          // Sunset rises to sit beside it, which is why the pairs below
+          // no longer read in v1's order.
+          { left: 300, top: 3457, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/Pam_Sh010_v002_web.mp4', label: 'Shot 010' },
+          { left: 935, top: 3544, width: 385, height: 215, src: 'assets/pamelove-threaded-jewelry/Frame_EndLockUp_v004_00001.jpg', label: 'End Lock-Up — Sunset' },
+          { left: 1030, top: 3795, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/PamelaLove_PB_Rose_v001_web.mp4', label: 'Rose' },
+          { left: 300, top: 4130, width: 595, height: 335, src: 'assets/pamelove-threaded-jewelry/Frame_FlowerCloseUp_00001.jpg', label: 'Flower Detail' },
+          { left: 1030, top: 4465, width: 595, height: 335, src: 'assets/pamelove-threaded-jewelry/Frame_EndLockUp_Day_00001.jpg', label: 'End Lock-Up — Day' },
+          { left: 605, top: 4553, width: 385, height: 220, src: 'assets/pamelove-threaded-jewelry/Frame_EyeCloseUp_00001.jpg', label: 'Eye Detail' },
+          { left: 300, top: 4809, width: 595, height: 335, localVideoSrc: 'assets/pamelove-threaded-jewelry/PamelaLove_PB_Sh020_v004_web.mp4', label: 'Shot 020' },
           // closing full-bleed shot, echoing the hero
-          { left: 0, top: 4140, width: 1920, height: 1075, src: 'assets/pamelove-threaded-jewelry/Frame_EndLockUp_A_0001.jpg', label: 'Threaded Jewelry' }
+          { left: 0, top: 5225, width: 1920, height: 1075, src: 'assets/pamelove-threaded-jewelry/Frame_EndLockUp_A_0001.jpg', label: 'Threaded Jewelry' }
         ]
       }
     },
@@ -4722,12 +4794,19 @@
     // PageFlip instance it was built for, so leaving one behind would
     // have it measuring a destroyed book on the next project's resizes.
     var flipbookResizeHandler = null;
+    // set by buildFlipbook to its own clearPendingTimer, so teardown can
+    // stop a poll belonging to an instance that is about to be destroyed
+    var flipbookPendingClear = null;
 
     function teardownFlipbook() {
       if (flipbookResizeHandler) {
         window.removeEventListener('resize', flipbookResizeHandler);
         flipbookResizeHandler = null;
       }
+      // stepPage's recovery poll (see its comment) closes over the
+      // instance being destroyed here, so a pending one has to go with it
+      // rather than wake up against a dead book on the next project
+      if (flipbookPendingClear) { flipbookPendingClear(); flipbookPendingClear = null; }
       if (activeFlipbook) {
         // PageFlip.destroy() calls block.remove() on the element it was
         // handed -- it detaches flipbookBookEl from the document itself,
@@ -4919,6 +4998,7 @@
       }
 
       flipbookResizeHandler = settleFlipbook;
+      flipbookPendingClear = clearPendingTimer;
       window.addEventListener('resize', flipbookResizeHandler);
       // crossing the portrait/landscape line is exactly when the clip
       // becomes wrong in the other direction, so re-run it there too
@@ -4931,10 +5011,39 @@
       // than as a plain race. Hold one step instead and run it the
       // moment the book settles.
       var pendingStep = 0;
+      var pendingTimer = 0;
       function stepPage(dir) {
-        if (pageFlip.getState() !== 'read') { pendingStep = dir; return; }
+        if (pageFlip.getState() !== 'read') {
+          pendingStep = dir;
+          // changeState below is the fast path that normally drains this,
+          // but it is not a guarantee: it only fires if the library
+          // actually finishes the flip it started. A flip interrupted
+          // partway -- a backgrounded tab pausing rAF mid-animation is the
+          // easy way to see it -- leaves the book parked in 'flipping'
+          // with no further event ever emitted, and from then on every
+          // click lands here, overwrites pendingStep, and is swallowed:
+          // the arrow is permanently dead with nothing logged and nothing
+          // visibly wrong. Poll as a floor under that, so the worst case
+          // is a step arriving a beat late rather than a button that
+          // never works again until the page is reloaded.
+          if (!pendingTimer) pendingTimer = setInterval(drainPendingStep, 250);
+          return;
+        }
         pendingStep = 0;
         if (dir > 0) pageFlip.flipNext(); else pageFlip.flipPrev();
+      }
+
+      function clearPendingTimer() {
+        if (pendingTimer) { clearInterval(pendingTimer); pendingTimer = 0; }
+      }
+
+      function drainPendingStep() {
+        if (!pendingStep) { clearPendingTimer(); return; }
+        if (pageFlip.getState() !== 'read') return;
+        var dir = pendingStep;
+        pendingStep = 0;
+        clearPendingTimer();
+        stepPage(dir);
       }
 
       // lifted the instant a flip starts (covers every trigger: the
@@ -4948,6 +5057,7 @@
         if (e.data === 'read' && pendingStep) {
           var dir = pendingStep;
           pendingStep = 0;
+          clearPendingTimer();
           // next frame, not this one: the library is still inside its own
           // state change here and starting the next flip synchronously
           // gets swallowed the same way the original click was
@@ -4985,6 +5095,18 @@
     // instead of being a fixed constant here.
     var EDITORIAL_CANVAS_W = 1920;
     var editorialCanvasHeight = 5348;
+    // both set per project by buildEditorialCanvas, read by
+    // layoutEditorialCanvas below
+    var editorialHeroTop = 0;
+    var editorialAlignTilde = false;
+    // .line-tilde is font-size 60.45px at line-height 1, so its <p> box is
+    // 60.45px tall in stage space; the ~ glyph's own ink sits 38px below
+    // that box's top (measured off the reference renders, where the ink
+    // spans y 114..120 against a box top of 76). Deriving the nav layer's
+    // scale from the box's measured height rather than re-reading the
+    // transform keeps this to one getBoundingClientRect.
+    var TILDE_BOX_PX = 60.45;
+    var TILDE_INK_DY = 38;
 
     // Scales .project-editorial-canvas (fixed at EDITORIAL_CANVAS_W) to
     // fit the actual viewport width, same "design at a fixed size, fit
@@ -5006,8 +5128,36 @@
       }
       var scale = editorialWrap.clientWidth / EDITORIAL_CANVAS_W;
       editorialCanvas.style.height = editorialCanvasHeight + 'px';
-      editorialCanvas.style.transform = 'scale(' + scale + ')';
-      editorialWrap.style.height = Math.round(editorialCanvasHeight * scale) + 'px';
+
+      // Optional per-project nudge so the hero's top edge meets the ~ in
+      // .nav-layer (opt in with alignHeroToTilde on the editorial block).
+      // This cannot be a static hero.top, which is why it lives here: the
+      // two elements are fitted to the viewport by different rules. The
+      // nav layer gets a CONTAIN fit and is then centred in the leftover
+      // space, while this canvas gets a WIDTH fit pinned to the top. On a
+      // window wide enough that the contain fit is height-limited the
+      // centring offset is zero and the two happen to line up -- which is
+      // why a fixed top looks correct on some screens. The moment the fit
+      // becomes width-limited the nav layer picks up a vertical offset
+      // this canvas never sees, and the ~ drifts below the hero: measured
+      // at 1424x805, a hero parked at top 115 lands 23px above the glyph.
+      // Recomputed on every resize because that offset moves with the
+      // window. dy can go slightly negative (the hero sitting just below
+      // the glyph); that is fine, since all it shifts out of the wrap's
+      // overflow:hidden is empty canvas above the hero.
+      var dy = 0;
+      if (editorialAlignTilde) {
+        var tildeEl = document.querySelector('.line-tilde');
+        var tr = tildeEl && tildeEl.getBoundingClientRect();
+        if (tr && tr.height > 0) {
+          var inkTop = tr.top + TILDE_INK_DY * (tr.height / TILDE_BOX_PX);
+          dy = inkTop - editorialHeroTop * scale;
+        }
+      }
+      editorialCanvas.style.transform =
+        (dy ? 'translateY(' + dy + 'px) ' : '') + 'scale(' + scale + ')';
+      editorialWrap.style.height =
+        Math.round(editorialCanvasHeight * scale + Math.max(0, dy)) + 'px';
     }
     window.addEventListener('resize', layoutEditorialCanvas);
 
@@ -5096,6 +5246,8 @@
     function buildEditorialCanvas(data) {
       var ed = data.editorial;
       editorialCanvasHeight = ed.canvasHeight || 5348;
+      editorialHeroTop = ed.hero.top;
+      editorialAlignTilde = !!ed.alignHeroToTilde;
       editorialCanvas.textContent = '';
 
       hero.style.left = ed.hero.left + 'px';
@@ -5924,15 +6076,31 @@
 
     // covers .stage.direction-from-about's own total duration (see its
     // CSS comment): every element's reverse delay+duration finishes by
-    // 1.780s, so there's nothing left transitioning past that point.
-    var FROM_ABOUT_MS = 1780;
+    // 1.780s (thumb-dating last), so there's nothing left transitioning
+    // past that point. The extra 120ms is deliberate slack, not padding
+    // of the choreography: set to the 1780 it actually needs, one busy
+    // frame is enough for the class to come off while the last curve is
+    // still settling, dropping it onto base timing mid-flight. Holding
+    // it longer cannot be seen -- every rule under the class is
+    // timing-only except .about-frame's, and that one holds the frame at
+    // the same clip-path: inset(0 0 0 100%) the base rule gives it, so
+    // it is fully clipped either way. Same slack as LEAVING_ABOUT_MS and
+    // LEAVING_DIRECTION_MS below, which already carried ~100ms.
+    var FROM_ABOUT_MS = 1900;
     var fromAboutTimer = null;
 
-    // covers .stage.direction-from-design's own total duration (see its
-    // CSS comment): the last element to finish is design-thumb-1 at
-    // 0.797s + 1.069s, and the thumbs plus the "Direction" lead-in both
-    // land on 2.865s, so nothing is still transitioning past that.
-    var FROM_DESIGN_MS = 2900;
+    // covers .stage.direction-from-design own total duration (see its
+    // CSS comment). Refitted off the reference, the route now ends at
+    // 2.301s: circular lands last at 0.891 + 1.410, the Direction lead-in
+    // settles on the same 2.301, and the grid cascade is done earlier at
+    // 0.959 + 1.136 = 2.095. That is 0.56s shorter than the time-reversal
+    // this replaced, so the old 3000 would have held the class well past
+    // the end. ~150ms of slack, same as the timers below: sized so one
+    // busy frame cannot drop the class while the last curve is still
+    // settling, and free to hold since every rule under it is timing-only
+    // (design-thumb-5 excepted, and that one is deliberately parked in the
+    // exact state its base rule wants).
+    var FROM_DESIGN_MS = 2450;
     var fromDesignTimer = null;
 
     function applyDirectionToggle() {
