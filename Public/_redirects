@@ -1,36 +1,76 @@
-# Direct project links: serve the homepage at each project's address (200
-# keeps the address as typed). The page then opens the project itself; see
-# the route table at the top of <head> in index.html, which needs a matching
-# entry for any address added here.
+# Direct project links. Each project has four lines:
+#   - two 200s serve the homepage at its address (200 keeps the address as
+#     typed), and the page then opens the project itself. See the route table
+#     at the top of <head> in index.html, which needs a matching entry.
+#   - two 301s send the same address with a trailing slash to the clean one.
 /WTHIGO / 200
 /wthigo / 200
+/WTHIGO/ /WTHIGO 301
+/wthigo/ /WTHIGO 301
 /PinkSockLive / 200
 /pinksocklive / 200
+/PinkSockLive/ /PinkSockLive 301
+/pinksocklive/ /PinkSockLive 301
 /PinkSockCircularMotion / 200
 /pinksockcircularmotion / 200
+/PinkSockCircularMotion/ /PinkSockCircularMotion 301
+/pinksockcircularmotion/ /PinkSockCircularMotion 301
 /PamelaLove / 200
 /pamelalove / 200
+/PamelaLove/ /PamelaLove 301
+/pamelalove/ /PamelaLove 301
 /DatingToGreatSuccess / 200
 /datingtogreatsuccess / 200
+/DatingToGreatSuccess/ /DatingToGreatSuccess 301
+/datingtogreatsuccess/ /DatingToGreatSuccess 301
 /Reel / 200
 /reel / 200
+/Reel/ /Reel 301
+/reel/ /Reel 301
 /GameAwards / 200
 /gameawards / 200
+/GameAwards/ /GameAwards 301
+/gameawards/ /GameAwards 301
 /GooglePlay / 200
 /googleplay / 200
+/GooglePlay/ /GooglePlay 301
+/googleplay/ /GooglePlay 301
 /Avgvst / 200
 /avgvst / 200
+/Avgvst/ /Avgvst 301
+/avgvst/ /Avgvst 301
 /Freediver / 200
 /freediver / 200
+/Freediver/ /Freediver 301
+/freediver/ /Freediver 301
 /iPhone18Pro / 200
 /iphone18pro / 200
+/iPhone18Pro/ /iPhone18Pro 301
+/iphone18pro/ /iPhone18Pro 301
 /Amazon / 200
 /amazon / 200
+/Amazon/ /Amazon 301
+/amazon/ /Amazon 301
 /Bubly / 200
 /bubly / 200
+/Bubly/ /Bubly 301
+/bubly/ /Bubly 301
 /RiotGames / 200
 /riotgames / 200
+/RiotGames/ /RiotGames 301
+/riotgames/ /RiotGames 301
 /BecauseOneDay / 200
 /becauseoneday / 200
+/BecauseOneDay/ /BecauseOneDay 301
+/becauseoneday/ /BecauseOneDay 301
 /NFL100 / 200
 /nfl100 / 200
+/NFL100/ /NFL100 301
+/nfl100/ /NFL100 301
+
+# Short links. 302, not 301, so browsers don't remember them permanently and
+# they can be pointed somewhere else later.
+/iphone18 /iPhone18Pro 302
+/iPhone18 /iPhone18Pro 302
+/iphone18/ /iPhone18Pro 302
+/iPhone18/ /iPhone18Pro 302
