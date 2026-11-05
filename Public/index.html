@@ -26,7 +26,7 @@
       'GooglePlay': 'Google Play',
       'Avgvst': 'AVGST',
       'Freediver': 'Freediver',
-      'iPhone17Pro': 'iPhone 17 Pro',
+      'iPhone18Pro': 'iPhone 18 Pro',
       'Amazon': 'Amazon',
       'Bubly': 'Bubly',
       'RiotGames': 'Riot Games',
@@ -1357,7 +1357,7 @@
   .design-thumb-4 { background-image: url('assets/AVGVST.gif'); }
   .design-thumb-5 { background-image: url('assets/Palmela-Love.gif'); }
   .design-thumb-6 { background-image: url('assets/SotD.gif'); }
-  .design-thumb-7 { background-image: url('assets/iPhone-17.gif'); }
+  .design-thumb-7 { background-image: url('assets/iPhone-18.gif'); }
   .design-thumb-8 { background-image: url('assets/Amazon-Buy-With-Prime.gif'); }
   .design-thumb-9 { background-image: url('assets/Bubbly.gif'); }
   .design-thumb-10 { background-image: url('assets/Riot-Games.gif'); }
@@ -3699,11 +3699,11 @@
       </div>
       <span class="thumb-label">Freediver</span>
     </div>
-    <div class="design-thumb design-thumb-7" data-project="iPhone 17 Pro">
-      <div class="thumb-media" style="background-image:url('assets/iPhone-17.gif');" data-video-title="iPhone 17 Pro">
-        <img class="thumb-hover-gif" src="assets/iPhone-17.gif" alt="" aria-hidden="true">
+    <div class="design-thumb design-thumb-7" data-project="iPhone 18 Pro">
+      <div class="thumb-media" style="background-image:url('assets/iPhone-18.gif');" data-video-title="iPhone 18 Pro">
+        <img class="thumb-hover-gif" src="assets/iPhone-18.gif" alt="" aria-hidden="true">
       </div>
-      <span class="thumb-label">iPhone 17 Pro^</span>
+      <span class="thumb-label">iPhone 18 Pro^</span>
     </div>
     <div class="design-thumb design-thumb-8" data-project="Amazon">
       <div class="thumb-media" style="background-image:url('assets/Amazon-Buy-With-Prime.gif');" data-video-title="Amazon">
@@ -4529,36 +4529,33 @@
         ]
       }
     },
-    'iPhone 17 Pro': {
+    'iPhone 18 Pro': {
       description: 'I had the great honor of contributing 3D and 2D animation assets across the September product launch. These are a couple spots I had the pleasure of contributing to.\n\nAnimation by Greg Rubner and others.',
       layout: 'editorial',
       // hero poster is the YouTube video's own thumbnail, not the
-      // iPhone-17.gif grid-tile crop -- see openProject's heroPoster
+      // iPhone-18.gif grid-tile crop -- see openProject's heroPoster
       // swap. Downloaded locally (maxresdefault, 1280x720) rather than
       // hotlinked to img.youtube.com.
-      heroPoster: 'assets/iphone-17/iPhone17-youtube-thumb.jpg',
+      heroPoster: 'assets/iphone-18/iPhone18-youtube-thumb.jpg',
       gallery: [
-        { src: 'assets/iPhone-17.gif', videoSrc: 'https://www.youtube.com/embed/TNhX1uR2vO8', label: 'iPhone 17 Pro' }
+        { src: 'assets/iPhone-18.gif', videoSrc: 'https://www.youtube.com/embed/DDnNc60onT4', label: 'iPhone 18 Pro' }
       ],
-      // No blocks yet, so unlike every other editorial page there is no
-      // closing full-bleed for canvasHeight to sit flush against -- the
-      // last thing on the canvas is the description. 1400 left 316px of
-      // dead scroll under it against the 115px above the hero, so the
-      // page bottomed out on a long empty gap. canvasHeight is instead
-      // the description's own bottom plus that same 115px, which frames
-      // the content evenly: 115 from the top of the canvas to the top of
-      // the hero, 115 from the bottom of the text to the end of the
-      // scroll. The description sets 4 lines at 14.25px/1.65 line-height
-      // in Sorts Mill Goudy = 94px, so it runs 990 -> 1084, and
-      // 1084 + 115 = 1199. Re-derive this if the description text
-      // changes length -- it is the one page whose height is driven by
-      // the copy rather than by a closing image.
+      // The 3 clips are all 960x540, so they take the standard 595x335
+      // cascade (see Amazon). The first sits flush with the description's
+      // bottom: 4 lines at 14.25px/1.65 line-height in Sorts Mill Goudy =
+      // 94px, so 990 -> 1084. With no closing full-bleed for canvasHeight
+      // to sit against, it's the last clip's bottom (2089) plus the same
+      // 115px that sits above the hero, so the page is framed evenly.
       editorial: {
-        canvasHeight: 1199,
+        canvasHeight: 2204,
         hero: { left: 300, top: 115, width: 1325, height: 750 },
         title: { left: 300, top: 897, fontSize: 37 },
         description: { left: 1028, top: 990, width: 600 },
-        blocks: []
+        blocks: [
+          { left: 300, top: 1084, width: 595, height: 335, localVideoSrc: 'assets/iphone-18/iPhone18Pro-GIF1.mp4', label: 'Beam Of Light' },
+          { left: 1030, top: 1419, width: 595, height: 335, localVideoSrc: 'assets/iphone-18/iPhone18Pro-GIF2.mp4', label: 'A20 Pro' },
+          { left: 300, top: 1754, width: 595, height: 335, localVideoSrc: 'assets/iphone-18/iPhone18Pro-GIF3.mp4', label: 'Battery Life' }
+        ]
       }
     },
     'Amazon': {
