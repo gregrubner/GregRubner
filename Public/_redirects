@@ -1,0 +1,36 @@
+# Direct project links: serve the homepage at each project's address (200
+# keeps the address as typed). The page then opens the project itself; see
+# the route table at the top of <head> in index.html, which needs a matching
+# entry for any address added here.
+/WTHIGO / 200
+/wthigo / 200
+/PinkSockLive / 200
+/pinksocklive / 200
+/PinkSockCircularMotion / 200
+/pinksockcircularmotion / 200
+/PamelaLove / 200
+/pamelalove / 200
+/DatingToGreatSuccess / 200
+/datingtogreatsuccess / 200
+/Reel / 200
+/reel / 200
+/GameAwards / 200
+/gameawards / 200
+/GooglePlay / 200
+/googleplay / 200
+/Avgvst / 200
+/avgvst / 200
+/Freediver / 200
+/freediver / 200
+/iPhone17Pro / 200
+/iphone17pro / 200
+/Amazon / 200
+/amazon / 200
+/Bubly / 200
+/bubly / 200
+/RiotGames / 200
+/riotgames / 200
+/BecauseOneDay / 200
+/becauseoneday / 200
+/NFL100 / 200
+/nfl100 / 200

@@ -3,6 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // Direct project links (gregrubner.com/WTHIGO): address -> the
+  // thumbnail's data-project value. To add one, add it here AND add its
+  // two lines to Public/_redirects, which is what makes the host serve
+  // this page at that address instead of a 404.
+  //
+  // Runs first thing in <head> because a trailing slash (/WTHIGO/) would
+  // otherwise make every relative assets/ path resolve under /WTHIGO/;
+  // tidying the address here fixes that before anything is requested.
+  // route-pending keeps the homepage from flashing up behind the project
+  // while the rest of this document parses (cleared in openProject's script).
+  (function () {
+    var routes = {
+      'WTHIGO': 'what-the-heck-is-this-going-on',
+      'PinkSockLive': 'Pink-$ock - Live',
+      'PinkSockCircularMotion': 'Pink-$ock - Circular Motion',
+      'PamelaLove': 'Pamela Love - Threaded Jewlery',
+      'DatingToGreatSuccess': 'Dating To Great Success',
+      'Reel': 'Reel',
+      'GameAwards': 'The Game Awards',
+      'GooglePlay': 'Google Play',
+      'Avgvst': 'AVGST',
+      'Freediver': 'Freediver',
+      'iPhone17Pro': 'iPhone 17 Pro',
+      'Amazon': 'Amazon',
+      'Bubly': 'Bubly',
+      'RiotGames': 'Riot Games',
+      'BecauseOneDay': 'Because One Day',
+      'NFL100': 'NFL 100'
+    };
+
+    function routeFromPath() {
+      var segment = location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+      return Object.keys(routes).filter(function (slug) {
+        return slug.toLowerCase() === segment;
+      })[0] || null;
+    }
+
+    window.__projectRoutes = routes;
+    window.__routeFromPath = routeFromPath;
+
+    var slug = routeFromPath();
+    if (slug && /^https?:$/.test(location.protocol)) {
+      history.replaceState(null, '', '/' + slug + location.search + location.hash);
+      document.documentElement.classList.add('route-pending');
+    }
+  })();
+</script>
 <title>Greg Rubner</title>
 <meta name="description" content="Greg Rubner is a Filmmaker &amp; Motion Designer">
 <link rel="canonical" href="https://gregrubner.com/">
@@ -38,6 +86,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&display=swap" rel="stylesheet">
 <style>
+  /* direct project link still loading: see the script at the top of
+     <head>. White to match .project-view, which opens without its fade. */
+  html.route-pending,
+  html.route-pending body { background: #fff; }
+  html.route-pending #glcanvas,
+  html.route-pending .stage,
+  html.route-pending .nav-layer { visibility: hidden; }
+  html.route-pending .project-view { transition: none; }
+
   html, body {
     margin: 0;
     padding: 0;
@@ -5407,11 +5464,62 @@
       setTimeout(cleanup, FLIGHT_MS + 150);
     }
 
-    function openProject(thumbEl) {
+    // Address bar <-> project page (route table: top of <head>). Only
+    // active at the site root or on a project address, so previewing from
+    // a file or a subfolder can't push the page somewhere its relative
+    // assets/ paths stop resolving.
+    var stage = document.querySelector('.stage');
+    var routes = window.__projectRoutes;
+    var routingEnabled = /^https?:$/.test(location.protocol) &&
+      (location.pathname === '/' || !!window.__routeFromPath());
+    // bumped by every open/close, so a close still mid-flight can't tear
+    // down a project that Back/Forward reopened in the meantime
+    var navToken = 0;
+
+    // A no-op when the address already matches, which is what keeps
+    // Back/Forward (the browser has already moved) from adding an entry.
+    function syncRouteUrl(path) {
+      if (routingEnabled && location.pathname !== path) history.pushState(null, '', path);
+    }
+
+    function pathForProject(key) {
+      var slug = Object.keys(routes).filter(function (s) { return routes[s] === key; })[0];
+      return slug ? '/' + slug : null;
+    }
+
+    // Opens a project from its address rather than a click, so there's no
+    // on-screen thumbnail to fly from (openProject's instant path). The
+    // view underneath still has to match the thumb, or closing would fly
+    // back to a cell that's hidden: Design grid projects need showing-design
+    // on. Pamela Love is on both grids, so the current view gets first pick.
+    function openRoute(slug) {
+      var inDesign = stage.classList.contains('showing-design');
+      var thumbs = Array.prototype.filter.call(
+        document.querySelectorAll('.portfolio-view .thumb[data-project], .design-view .design-thumb[data-project]'),
+        function (t) { return t.getAttribute('data-project') === routes[slug]; }
+      );
+      var thumb = thumbs.filter(function (t) {
+        return t.classList.contains('design-thumb') === inDesign;
+      })[0] || thumbs[0];
+      if (!thumb) return;
+
+      var isDesign = thumb.classList.contains('design-thumb');
+      if (isDesign !== inDesign || stage.classList.contains('showing-about')) {
+        stage.classList.remove('showing-design', 'showing-about', 'showing-direction', 'design-from-about', 'design-from-direction', 'about-from-design', 'about-from-design-via-direction', 'about-from-direction', 'direction-from-about', 'direction-from-design', 'leaving-about', 'leaving-direction');
+        if (isDesign) stage.classList.add('showing-design');
+      }
+      openProject(thumb, true);
+    }
+
+    function openProject(thumbEl, instant) {
       var key = thumbEl.getAttribute('data-project');
       var data = PROJECT_CONTENT[key];
       var media = thumbEl.querySelector('.thumb-media');
       if (!media) return;
+
+      navToken++;
+      var projectPath = pathForProject(key);
+      if (projectPath) syncRouteUrl(projectPath);
 
       activeThumbMedia = media;
       var fromRect = media.getBoundingClientRect();
@@ -5500,7 +5608,7 @@
       // at nearly the same width, so the flying clone has almost no
       // distance to travel -- it reads as a flash rather than a flight.
       // The view's own opacity transition carries the change instead.
-      if (window.__isMobile()) {
+      if (instant || window.__isMobile()) {
         hero.style.backgroundImage = "url('" + heroImageUrl + "')";
         landed();
       } else {
@@ -5511,6 +5619,8 @@
     function closeProject() {
       if (!view.classList.contains('active')) return;
       view.classList.remove('revealed');
+      syncRouteUrl('/');
+      var token = ++navToken;
 
       var toRect = activeThumbMedia ? activeThumbMedia.getBoundingClientRect() : null;
       var fromRect = hero.getBoundingClientRect();
@@ -5521,6 +5631,7 @@
       var toImageUrl = activeThumbMedia ? stripUrl(activeThumbMedia.style.backgroundImage) : stripUrl(imageUrl);
 
       function finish() {
+        if (token !== navToken) return;
         view.classList.remove('active');
         hero.textContent = '';
         hero.style.backgroundImage = '';
@@ -5546,6 +5657,25 @@
 
     view.addEventListener('click', function (e) {
       if (e.target === view) closeProject();
+    });
+
+    window.addEventListener('popstate', function () {
+      var slug = window.__routeFromPath();
+      if (slug) openRoute(slug); else closeProject();
+    });
+
+    // DOMContentLoaded rather than right here: the layout scripts further
+    // down this file have to have run before the project can be measured.
+    document.addEventListener('DOMContentLoaded', function () {
+      var slug = window.__routeFromPath();
+      try {
+        if (slug && routingEnabled) openRoute(slug);
+      } finally {
+        // the view's opacity has to commit with its transition still off,
+        // or removing route-pending would start the fade from 0
+        void view.offsetWidth;
+        document.documentElement.classList.remove('route-pending');
+      }
     });
 
     document.addEventListener('keydown', function (e) {
