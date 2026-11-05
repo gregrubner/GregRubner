@@ -1922,6 +1922,7 @@
   }
 
   .project-hero {
+    position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
     background-size: cover;
@@ -1941,6 +1942,32 @@
     height: 100%;
     border: 0;
     display: block;
+  }
+
+  /* hover state on a hero video that hasn't been started yet: 50% dim
+     with "Play" centered, in the "Greg Rubner" face. font-size here is
+     only a fallback; sizeHeroPlayLabel sets the real one. Mouse devices
+     only, since a tap on a touchscreen just starts the video. */
+  .project-hero-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-family: 'Sorts Mill Goudy', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 56px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    .project-hero:hover .project-hero-play { opacity: 1; }
   }
 
   .project-info {
@@ -3872,8 +3899,36 @@
   // video) is applied once the video actually loads, so the hero's
   // fixed 16:9 box -- used as the fly-in animation's target rect --
   // isn't resized until then.
+  //
+  // "Play" matches "Greg Rubner"'s on-screen size. Both sit under
+  // their own scale transforms (.stage's and .line-shrink's for the name,
+  // the editorial canvas's for the hero) that change with the window, so
+  // the name is measured as rendered and the result divided back by the
+  // hero's scale. Re-run on each hover so it follows a window resize.
+  function sizeHeroPlayLabel(e) {
+    var media = e.currentTarget;
+    var label = media.querySelector('.project-hero-play');
+    var name = document.querySelector('.line-name .line-shrink');
+    if (!label || !name || !name.offsetWidth || !media.offsetWidth) return;
+    var nameScale = name.getBoundingClientRect().width / name.offsetWidth;
+    var heroScale = media.getBoundingClientRect().width / media.offsetWidth;
+    var nameSize = parseFloat(getComputedStyle(name).fontSize) * nameScale;
+    label.style.fontSize = (nameSize / heroScale) + 'px';
+  }
+
   function embedHeroVideoOnClick(media, videoSrc, videoTitle, aspectRatio) {
     media.style.cursor = 'pointer';
+    var playLabel = document.createElement('div');
+    playLabel.className = 'project-hero-play';
+    playLabel.setAttribute('aria-hidden', 'true');
+    playLabel.textContent = 'Play';
+    media.appendChild(playLabel);
+    // sized now as well as on hover: a hero that lands under a pointer
+    // that's already there is hovered without a mouseenter ever firing.
+    // A named function, so repeat opens of this reused element can't
+    // stack up listeners.
+    sizeHeroPlayLabel({ currentTarget: media });
+    media.addEventListener('mouseenter', sizeHeroPlayLabel);
     media.addEventListener('click', function loadVideo(e) {
       e.stopPropagation();
       var sep = videoSrc.indexOf('?') === -1 ? '?' : '&';
